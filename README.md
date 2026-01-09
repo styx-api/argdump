@@ -1,6 +1,6 @@
 # argdump
 
-Serialize and deserialize Python argparse parsers.
+Serialize and deserialize Python [argparse](https://docs.python.org/3/library/argparse.html) parsers.
 
 ## Installation
 
