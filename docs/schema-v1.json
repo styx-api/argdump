@@ -2,153 +2,407 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://niwrap.dev/argdump/schema-v1.json",
   "title": "ParserInfo",
-  "description": "Serialized argparse.ArgumentParser",
+  "description": "Serialized argparse.ArgumentParser. Represents a complete argument parser configuration including all arguments, groups, and subparsers.",
   "type": "object",
   "properties": {
-    "$schema": { "type": "string", "format": "uri" },
-    "$env": { "$ref": "#/$defs/EnvironmentInfo" },
-    "prog": { "type": ["string", "null"] },
-    "description": { "type": ["string", "null"] },
-    "epilog": { "type": ["string", "null"] },
-    "usage": { "type": ["string", "null"] },
-    "add_help": { "type": "boolean", "default": true },
-    "allow_abbrev": { "type": "boolean", "default": true },
-    "formatter_class": { "type": ["string", "null"] },
-    "prefix_chars": { "type": "string", "default": "-" },
-    "fromfile_prefix_chars": { "type": ["string", "null"] },
-    "argument_default": {},
-    "conflict_handler": { "type": "string", "default": "error" },
-    "exit_on_error": { "type": "boolean", "default": true },
-    "suggest_on_error": { "type": "boolean", "default": false },
-    "color": { "type": "boolean", "default": true },
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "JSON Schema URI for validation"
+    },
+    "$env": {
+      "$ref": "#/$defs/EnvironmentInfo",
+      "description": "Information about the environment where the parser was serialized"
+    },
+    "prog": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The name of the program. By default, ArgumentParser calculates the name from sys.argv[0] or __main__ module attributes. Available in help messages via %(prog)s format specifier."
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Text to display before the argument help. Gives a brief description of what the program does and how it works. By default, line-wrapped to fit the display."
+    },
+    "epilog": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Text to display after the argument help. Useful for displaying additional description or examples after the arguments list."
+    },
+    "usage": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The string describing the program usage. By default, calculated from the arguments added to the parser. Supports %(prog)s format specifier."
+    },
+    "add_help": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to add a -h/--help option to the parser. When true (default), a help action is automatically added that displays the parser's help message and exits."
+    },
+    "allow_abbrev": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether long options can be abbreviated if the abbreviation is unambiguous. When true (default), --foo can match --foobar if no other options start with --foo."
+    },
+    "formatter_class": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "A class for customizing the help output. Common values: 'RawDescriptionHelpFormatter' (preserves description/epilog whitespace), 'RawTextHelpFormatter' (preserves all help text whitespace), 'ArgumentDefaultsHelpFormatter' (adds default values to help), 'MetavarTypeHelpFormatter' (uses type names as metavar)."
+    },
+    "prefix_chars": {
+      "type": "string",
+      "default": "-",
+      "description": "The set of characters that prefix optional arguments. Default is '-' for options like -f and --foo. Can be set to '-+' for options like +f or '/+' for Windows-style /foo options."
+    },
+    "fromfile_prefix_chars": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The set of characters that prefix files from which additional arguments should be read. When set (e.g., '@'), arguments starting with this character are treated as filenames containing additional arguments, one per line."
+    },
+    "argument_default": {
+      "description": "The global default value for arguments. If set to argparse.SUPPRESS, no attribute is added for arguments not present on the command line. By default, individual argument defaults are None."
+    },
+    "conflict_handler": {
+      "type": "string",
+      "default": "error",
+      "description": "The strategy for resolving conflicting option strings. 'error' (default) raises an exception when duplicate option strings are added. 'resolve' replaces the previous action with the new one."
+    },
+    "exit_on_error": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether ArgumentParser exits with error info when an error occurs. When false, ArgumentError exceptions can be caught manually instead of exiting. Added in Python 3.9."
+    },
+    "suggest_on_error": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to enable suggestions for mistyped argument choices and subparser names. When true, error messages may suggest similar valid choices. Added in Python 3.14."
+    },
+    "color": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to allow color output in help messages using ANSI escape sequences. When false, colored output is always disabled regardless of environment variables. Added in Python 3.14."
+    },
     "actions": {
       "type": "array",
-      "items": { "$ref": "#/$defs/ActionInfo" }
+      "items": {
+        "$ref": "#/$defs/ActionInfo"
+      },
+      "description": "List of all argument actions defined on this parser, including positional arguments, optional arguments, and special actions like help and version."
     },
     "argument_groups": {
       "type": "array",
-      "items": { "$ref": "#/$defs/ArgumentGroup" }
+      "items": {
+        "$ref": "#/$defs/ArgumentGroup"
+      },
+      "description": "List of argument groups for organizing arguments in help output. By default, arguments are grouped into 'positional arguments' and 'options'. Custom groups can provide better conceptual organization."
     },
     "mutually_exclusive_groups": {
       "type": "array",
-      "items": { "$ref": "#/$defs/MutualExclusionGroup" }
+      "items": {
+        "$ref": "#/$defs/MutualExclusionGroup"
+      },
+      "description": "List of mutually exclusive argument groups. Arguments within a group cannot be used together; the parser will raise an error if multiple arguments from the same exclusive group are provided."
     }
   },
-  "required": ["actions", "argument_groups", "mutually_exclusive_groups"],
-
+  "required": [
+    "actions",
+    "argument_groups",
+    "mutually_exclusive_groups"
+  ],
   "$defs": {
     "EnvironmentInfo": {
       "type": "object",
-      "description": "Information about the environment where serialization occurred",
+      "description": "Information about the Python environment where the ArgumentParser was serialized. Useful for debugging compatibility issues across different environments.",
       "properties": {
-        "python_version": { "type": "string" },
-        "python_implementation": { "type": "string" },
-        "platform_system": { "type": "string" },
-        "platform_release": { "type": "string" },
-        "platform_machine": { "type": "string" },
-        "argdump_version": { "type": "string" }
+        "python_version": {
+          "type": "string",
+          "description": "Python version string (e.g., '3.12.0')"
+        },
+        "python_implementation": {
+          "type": "string",
+          "description": "Python implementation name (e.g., 'CPython', 'PyPy')"
+        },
+        "platform_system": {
+          "type": "string",
+          "description": "Operating system name (e.g., 'Linux', 'Windows', 'Darwin')"
+        },
+        "platform_release": {
+          "type": "string",
+          "description": "Operating system release version"
+        },
+        "platform_machine": {
+          "type": "string",
+          "description": "Machine architecture (e.g., 'x86_64', 'arm64')"
+        },
+        "argdump_version": {
+          "type": "string",
+          "description": "Version of argdump that produced this serialization"
+        }
       },
       "required": [
         "python_version",
-        "python_implementation", 
+        "python_implementation",
         "platform_system",
         "platform_release",
         "platform_machine",
         "argdump_version"
       ]
     },
-
     "ActionType": {
       "type": "string",
+      "description": "The type of action to perform when this argument is encountered. Determines how the argument value is processed and stored.",
       "enum": [
-        "store", "store_const", "store_true", "store_false",
-        "append", "append_const", "count", "help", "version",
-        "parsers", "extend", "boolean_optional", "unknown"
-      ]
+        "store",
+        "store_const",
+        "store_true",
+        "store_false",
+        "append",
+        "append_const",
+        "count",
+        "help",
+        "version",
+        "parsers",
+        "extend",
+        "boolean_optional",
+        "unknown"
+      ],
+      "$comment": "Action type descriptions: 'store' - stores the argument value (default); 'store_const' - stores a constant value specified by const; 'store_true'/'store_false' - stores True/False, with opposite default; 'append' - appends each value to a list; 'append_const' - appends const to a list; 'count' - counts occurrences (e.g., -vvv); 'help' - prints help and exits; 'version' - prints version and exits; 'parsers' - handles subcommands; 'extend' - extends a list with values; 'boolean_optional' - creates --flag and --no-flag options; 'unknown' - unrecognized custom action"
     },
-
     "TypeInfo": {
       "type": "object",
+      "description": "Information about the type converter function used to convert command-line strings to Python objects. The type function is called with a single string argument and should return the converted value.",
       "properties": {
-        "name": { "type": "string" },
-        "module": { "type": ["string", "null"] },
-        "builtin": { "type": "boolean", "default": false },
-        "serializable": { "type": "boolean", "default": true }
+        "name": {
+          "type": "string",
+          "description": "Name of the type converter function (e.g., 'int', 'float', 'Path')"
+        },
+        "module": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Module where the type converter is defined (e.g., 'builtins', 'pathlib'). Null for lambdas or local functions."
+        },
+        "builtin": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the type is a Python builtin (int, float, str, etc.)"
+        },
+        "serializable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the type converter can be reliably reconstructed from this info. False for lambdas, closures, or types that can't be imported."
+        }
       },
-      "required": ["name"]
+      "required": [
+        "name"
+      ]
     },
-
     "FileTypeInfo": {
       "type": "object",
+      "description": "Configuration for argparse.FileType, which creates objects that open command-line arguments as files. FileType objects understand '-' as stdin/stdout.",
       "properties": {
-        "mode": { "type": "string", "default": "r" },
-        "bufsize": { "type": "integer", "default": -1 },
-        "encoding": { "type": ["string", "null"] },
-        "errors": { "type": ["string", "null"] }
+        "mode": {
+          "type": "string",
+          "default": "r",
+          "description": "File mode string passed to open(). Common values: 'r' (read text), 'w' (write text), 'rb' (read binary), 'wb' (write binary)."
+        },
+        "bufsize": {
+          "type": "integer",
+          "default": -1,
+          "description": "Buffer size passed to open(). -1 uses system default, 0 is unbuffered, 1 is line buffered, >1 is buffer size in bytes."
+        },
+        "encoding": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Text encoding for the file (e.g., 'utf-8'). Only applicable for text mode files."
+        },
+        "errors": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Error handling scheme for encoding errors (e.g., 'strict', 'ignore', 'replace'). Only applicable for text mode files."
+        }
       }
     },
-
     "ActionInfo": {
       "type": "object",
+      "description": "Complete specification of a single command-line argument, including how it should be parsed, validated, and stored.",
       "properties": {
         "option_strings": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          },
+          "description": "List of option strings that trigger this action (e.g., ['-f', '--foo']). Empty for positional arguments. For optional arguments, the first long option (or first short option if no long) determines the dest."
         },
-        "dest": { "type": "string" },
-        "action_type": { "$ref": "#/$defs/ActionType" },
+        "dest": {
+          "type": "string",
+          "description": "The name of the attribute to be added to the namespace object returned by parse_args(). For optional arguments, derived from the option strings by removing prefix dashes and converting internal dashes to underscores."
+        },
+        "action_type": {
+          "$ref": "#/$defs/ActionType",
+          "description": "The type of action to perform when this argument is encountered."
+        },
         "nargs": {
           "oneOf": [
-            { "type": "integer" },
-            { "type": "string" },
-            { "type": "null" },
-            { "$ref": "#/$defs/ArgparseMarker" }
-          ]
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "enum": [
+                "?",
+                "*",
+                "+"
+              ]
+            },
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/ArgparseMarker"
+            }
+          ],
+          "description": "Number of command-line arguments to consume. Integer N gathers N args into a list. '?' consumes zero or one arg. '*' gathers all args into a list. '+' requires at least one arg. REMAINDER gathers all remaining args. Null (default) means one argument that produces a single value (not a list)."
         },
-        "const": {},
-        "default": {},
+        "const": {
+          "description": "A constant value used by some actions: stored by 'store_const' and 'append_const', used as the value when an optional argument with nargs='?' is provided without a value. Defaults to None."
+        },
+        "default": {
+          "description": "The value produced if the argument is absent from the command line. For optional arguments, used when the option is not provided. For positional arguments with nargs='?' or '*', used when no values are given. If SUPPRESS, no attribute is added when absent."
+        },
         "type_info": {
           "oneOf": [
-            { "$ref": "#/$defs/TypeInfo" },
-            { "type": "null" }
-          ]
+            {
+              "$ref": "#/$defs/TypeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Type converter that transforms the command-line string into the desired Python type. If null, the argument remains a string. Common types: int, float, pathlib.Path, or custom callables."
         },
         "file_type_info": {
           "oneOf": [
-            { "$ref": "#/$defs/FileTypeInfo" },
-            { "type": "null" }
-          ]
+            {
+              "$ref": "#/$defs/FileTypeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "If the type is argparse.FileType, contains its configuration. FileType automatically opens files and handles '-' as stdin/stdout."
         },
         "choices": {
           "oneOf": [
-            { "type": "array" },
-            { "type": "null" }
-          ]
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A sequence of allowable values for the argument. If provided, the argument value is validated against this list after type conversion. An error is raised if the value is not in choices."
         },
-        "required": { "type": "boolean", "default": false },
-        "help": { "type": ["string", "null"] },
+        "required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether an optional argument must be provided. By default, optional arguments (those with option_strings) are not required. Positional arguments are implicitly required unless nargs is '?' or '*'."
+        },
+        "help": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A brief description of the argument displayed in help messages. Supports format specifiers like %(prog)s, %(default)s, %(type)s. Set to SUPPRESS to hide the argument from help."
+        },
         "metavar": {
           "oneOf": [
-            { "type": "string" },
-            { "type": "array", "items": { "type": "string" } },
-            { "type": "null" }
-          ]
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The name for the argument in usage messages. By default, positional args use dest and optional args use uppercased dest. A tuple can specify different names for each value when nargs > 1."
         },
-        "deprecated": { "type": "boolean", "default": false },
-        "version": { "type": ["string", "null"] },
+        "deprecated": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether use of this argument is deprecated. When true, a warning is printed to stderr when the argument is used. Added in Python 3.13."
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Version string printed when this argument is invoked. Only used when action_type is 'version'. Supports %(prog)s format specifier."
+        },
         "subparsers": {
           "oneOf": [
             {
               "type": "object",
-              "additionalProperties": { "$ref": "#" }
+              "additionalProperties": {
+                "$ref": "#"
+              },
+              "description": "Map of subcommand names to their ArgumentParser configurations"
             },
-            { "type": "null" }
-          ]
+            {
+              "type": "null"
+            }
+          ],
+          "description": "For subparser actions (action_type='parsers'), contains the nested parsers for each subcommand. Keys are command names, values are complete ParserInfo objects."
         },
-        "subparsers_title": { "type": ["string", "null"] },
-        "subparsers_description": { "type": ["string", "null"] },
-        "subparsers_dest": { "type": ["string", "null"] },
-        "subparsers_required": { "type": "boolean", "default": false },
+        "subparsers_title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Title for the subparser group in help output. Defaults to 'subcommands' if description is provided, otherwise uses title for positional arguments."
+        },
+        "subparsers_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Description for the subparser group in help output."
+        },
+        "subparsers_dest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Name of the attribute under which the selected subcommand name will be stored. By default, None and no value is stored."
+        },
+        "subparsers_required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether a subcommand must be provided. When true, an error is raised if no subcommand is given."
+        },
         "subparsers_aliases": {
           "oneOf": [
             {
@@ -156,51 +410,98 @@
               "description": "Mapping of subparser name to list of aliases",
               "additionalProperties": {
                 "type": "array",
-                "items": { "type": "string" }
+                "items": {
+                  "type": "string"
+                }
               }
             },
-            { "type": "null" }
-          ]
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Aliases that can be used instead of the canonical subcommand name. For example, 'co' as an alias for 'checkout'."
         },
-        "custom_action_class": { "type": ["string", "null"] }
+        "custom_action_class": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Fully qualified name of a custom Action subclass if one is used (e.g., 'mymodule.MyAction'). Null for standard built-in actions."
+        }
       },
-      "required": ["option_strings", "dest", "action_type"]
+      "required": [
+        "option_strings",
+        "dest",
+        "action_type"
+      ]
     },
-
     "ArgumentGroup": {
       "type": "object",
+      "description": "A group of arguments for display purposes in help output. Allows organizing related arguments together with a title and optional description. Does not affect parsing behavior.",
       "properties": {
-        "title": { "type": ["string", "null"] },
-        "description": { "type": ["string", "null"] },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Title for this argument group displayed in help. By default, groups are titled 'positional arguments' and 'options'."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Description text displayed below the group title, before the arguments."
+        },
         "actions": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          },
+          "description": "List of argument dest values that belong to this group."
         }
       },
-      "required": ["actions"]
+      "required": [
+        "actions"
+      ]
     },
-
     "MutualExclusionGroup": {
       "type": "object",
+      "description": "A group of arguments that cannot be used together. The parser will raise an error if more than one argument from this group is provided on the command line.",
       "properties": {
-        "required": { "type": "boolean" },
+        "required": {
+          "type": "boolean",
+          "description": "Whether at least one argument from this group must be provided. When true, an error is raised if none of the group's arguments are given."
+        },
         "actions": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          },
+          "description": "List of argument dest values that are mutually exclusive with each other."
         }
       },
-      "required": ["required", "actions"]
+      "required": [
+        "required",
+        "actions"
+      ]
     },
-
     "ArgparseMarker": {
       "type": "object",
+      "description": "Special argparse sentinel values that have semantic meaning beyond simple values.",
       "properties": {
         "__argparse__": {
           "type": "string",
-          "enum": ["SUPPRESS", "REMAINDER"]
+          "enum": [
+            "SUPPRESS",
+            "REMAINDER"
+          ],
+          "description": "SUPPRESS - indicates the attribute should not be added if the argument is absent, or the help entry should be hidden. REMAINDER - captures all remaining command-line arguments into a list (used with nargs)."
         }
       },
-      "required": ["__argparse__"]
+      "required": [
+        "__argparse__"
+      ]
     }
   }
 }
