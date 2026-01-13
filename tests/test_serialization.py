@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import platform
 import sys
 from pathlib import Path
 
@@ -18,6 +19,7 @@ class TestBasicSerialization:
         data = argdump.dump(parser)
 
         assert isinstance(data, dict)
+        assert "$schema" in data
         assert len(data["actions"]) >= 1  # at least help
 
     def test_simple_parser(self, simple_parser):
@@ -41,6 +43,44 @@ class TestBasicSerialization:
         json_str = argdump.dumps(simple_parser, indent=2)
         assert "\n" in json_str
         assert "  " in json_str
+
+
+class TestEnvironmentInfo:
+    """Test environment metadata in serialized output."""
+
+    def test_env_included_by_default(self, simple_parser):
+        data = argdump.dump(simple_parser)
+
+        assert "$env" in data
+        env = data["$env"]
+        assert env["python_version"] == platform.python_version()
+        assert env["python_implementation"] == platform.python_implementation()
+        assert env["platform_system"] == platform.system()
+        assert env["platform_release"] == platform.release()
+        assert env["platform_machine"] == platform.machine()
+        assert env["argdump_version"] == argdump.__version__
+
+    def test_env_can_be_excluded(self, simple_parser):
+        data = argdump.dump(simple_parser, include_env=False)
+
+        assert "$env" not in data
+        assert "$schema" in data
+        assert "prog" in data
+
+    def test_dumps_include_env(self, simple_parser):
+        json_with_env = argdump.dumps(simple_parser, include_env=True)
+        json_without_env = argdump.dumps(simple_parser, include_env=False)
+
+        assert "$env" in json_with_env
+        assert "$env" not in json_without_env
+
+    def test_get_environment_info(self):
+        env = argdump.get_environment_info()
+
+        assert env.python_version == platform.python_version()
+        assert env.python_implementation == platform.python_implementation()
+        assert env.platform_system == platform.system()
+        assert env.argdump_version == argdump.__version__
 
 
 class TestActionTypes:
@@ -245,6 +285,25 @@ class TestSubparsers:
         cmd2_action = next(a for a in level1["actions"] if a["action_type"] == "parsers")
         assert "level2" in cmd2_action["subparsers"]
 
+    def test_subparser_aliases(self):
+        parser = argparse.ArgumentParser(prog="aliased")
+        subparsers = parser.add_subparsers(dest="command")
+        subparsers.add_parser("checkout", aliases=["co", "ch"])
+        subparsers.add_parser("commit", aliases=["ci"])
+
+        data = argdump.dump(parser)
+
+        subparsers_action = next(a for a in data["actions"] if a["action_type"] == "parsers")
+
+        # Should have the canonical names
+        assert "checkout" in subparsers_action["subparsers"]
+        assert "commit" in subparsers_action["subparsers"]
+
+        # Should have aliases recorded
+        aliases = subparsers_action.get("subparsers_aliases", {})
+        assert set(aliases.get("checkout", [])) == {"co", "ch"}
+        assert aliases.get("commit", []) == ["ci"]
+
 
 class TestSpecialValues:
     """Test special value serialization."""
@@ -274,3 +333,28 @@ class TestSpecialValues:
         actions = {a["dest"]: a for a in data["actions"]}
         assert actions["list"]["default"] == [1, 2, 3]
         assert actions["dict"]["default"] == {"key": "value"}
+
+
+class TestDeprecated:
+    """Test deprecated argument handling (Python 3.13+)."""
+
+    @pytest.mark.skipif(sys.version_info < (3, 13), reason="deprecated requires 3.13+")
+    def test_deprecated_argument(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--old-flag", deprecated=True)
+        parser.add_argument("--new-flag")
+
+        data = argdump.dump(parser)
+        actions = {a["dest"]: a for a in data["actions"]}
+
+        assert actions["old_flag"]["deprecated"] is True
+        assert actions["new_flag"]["deprecated"] is False
+
+    def test_deprecated_defaults_to_false(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--flag")
+
+        data = argdump.dump(parser)
+        action = next(a for a in data["actions"] if a["dest"] == "flag")
+
+        assert action["deprecated"] is False

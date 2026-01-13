@@ -6,6 +6,7 @@
   "type": "object",
   "properties": {
     "$schema": { "type": "string", "format": "uri" },
+    "$env": { "$ref": "#/$defs/EnvironmentInfo" },
     "prog": { "type": ["string", "null"] },
     "description": { "type": ["string", "null"] },
     "epilog": { "type": ["string", "null"] },
@@ -18,6 +19,8 @@
     "argument_default": {},
     "conflict_handler": { "type": "string", "default": "error" },
     "exit_on_error": { "type": "boolean", "default": true },
+    "suggest_on_error": { "type": "boolean", "default": false },
+    "color": { "type": "boolean", "default": true },
     "actions": {
       "type": "array",
       "items": { "$ref": "#/$defs/ActionInfo" }
@@ -34,6 +37,27 @@
   "required": ["actions", "argument_groups", "mutually_exclusive_groups"],
 
   "$defs": {
+    "EnvironmentInfo": {
+      "type": "object",
+      "description": "Information about the environment where serialization occurred",
+      "properties": {
+        "python_version": { "type": "string" },
+        "python_implementation": { "type": "string" },
+        "platform_system": { "type": "string" },
+        "platform_release": { "type": "string" },
+        "platform_machine": { "type": "string" },
+        "argdump_version": { "type": "string" }
+      },
+      "required": [
+        "python_version",
+        "python_implementation", 
+        "platform_system",
+        "platform_release",
+        "platform_machine",
+        "argdump_version"
+      ]
+    },
+
     "ActionType": {
       "type": "string",
       "enum": [
@@ -110,6 +134,7 @@
             { "type": "null" }
           ]
         },
+        "deprecated": { "type": "boolean", "default": false },
         "version": { "type": ["string", "null"] },
         "subparsers": {
           "oneOf": [
@@ -124,6 +149,19 @@
         "subparsers_description": { "type": ["string", "null"] },
         "subparsers_dest": { "type": ["string", "null"] },
         "subparsers_required": { "type": "boolean", "default": false },
+        "subparsers_aliases": {
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Mapping of subparser name to list of aliases",
+              "additionalProperties": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
         "custom_action_class": { "type": ["string", "null"] }
       },
       "required": ["option_strings", "dest", "action_type"]

@@ -36,6 +36,24 @@ class TestBasicDeserialization:
         args = restored.parse_args(["input.txt"])
         assert args.input == "input.txt"
 
+    def test_env_field_ignored_during_load(self, simple_parser):
+        """Ensure $env metadata doesn't interfere with deserialization."""
+        data = argdump.dump(simple_parser, include_env=True)
+        assert "$env" in data
+
+        restored = argdump.load(data)
+        assert restored.prog == simple_parser.prog
+
+    def test_load_without_env(self, simple_parser):
+        """Loading works with or without $env field."""
+        data_with_env = argdump.dump(simple_parser, include_env=True)
+        data_without_env = argdump.dump(simple_parser, include_env=False)
+
+        restored1 = argdump.load(data_with_env)
+        restored2 = argdump.load(data_without_env)
+
+        assert restored1.prog == restored2.prog == simple_parser.prog
+
 
 class TestTypeReconstruction:
     """Test type converter reconstruction."""
@@ -128,6 +146,23 @@ class TestSubparsers:
         assert args.command == "build"
         assert args.release is True
         assert args.jobs == 8
+
+    def test_subparser_aliases(self):
+        parser = argparse.ArgumentParser(prog="aliased")
+        subparsers = parser.add_subparsers(dest="command")
+        checkout = subparsers.add_parser("checkout", aliases=["co"])
+        checkout.add_argument("repo")
+
+        restored = argdump.load(argdump.dump(parser))
+
+        # Both canonical name and alias should work
+        args = restored.parse_args(["checkout", "myrepo"])
+        assert args.command == "checkout"
+        assert args.repo == "myrepo"
+
+        args = restored.parse_args(["co", "myrepo"])
+        assert args.command == "co"
+        assert args.repo == "myrepo"
 
 
 class TestParserSettings:

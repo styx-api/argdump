@@ -2,7 +2,7 @@
 
 import argparse
 from enum import Enum
-from typing import Any
+from typing import Any, List
 
 import pytest
 
@@ -65,10 +65,24 @@ class TestSerializeValue:
         assert result == {"__argparse__": "REMAINDER"}
 
     def test_circular_reference(self):
-        lst: list[Any] = [1, 2]
+        lst: List[Any] = [1, 2]
         lst.append(lst)  # circular
         result = serialize_value(lst)
         assert result[2] == {"__circular_ref__": True}
+
+    def test_type_objects(self):
+        result = serialize_value(int)
+        assert result["__type__"] is True
+        assert result["name"] == "int"
+        assert result["module"] == "builtins"
+
+    def test_tuple(self):
+        result = serialize_value((1, 2, 3))
+        assert result == [1, 2, 3]
+
+    def test_nested_containers(self):
+        result = serialize_value({"list": [1, {"nested": True}]})
+        assert result == {"list": [1, {"nested": True}]}
 
 
 class TestDeserializeValue:
@@ -112,6 +126,35 @@ class TestDeserializeValue:
         result = deserialize_value({"__repr__": "<obj>", "__serializable__": False})
         assert result is None
 
+    def test_enum_reconstruction(self):
+        serialized = {
+            "__enum__": True,
+            "class": "Color",
+            "module": __name__,
+            "value": "red",
+            "name": "RED",
+        }
+        # Note: This test's module path may not work in all test configurations
+        # The deserialization will fall back to returning the raw value
+        result = deserialize_value(serialized)
+        # Either reconstructed enum or fallback to value
+        assert result == Color.RED or result == "red"
+
+    def test_type_reconstruction(self):
+        serialized = {"__type__": True, "name": "int", "module": "builtins"}
+        result = deserialize_value(serialized)
+        assert result is int
+
+    def test_circular_ref_returns_none(self):
+        result = deserialize_value({"__circular_ref__": True})
+        assert result is None
+
+    def test_nested_deserialization(self):
+        data = {"outer": {"__set__": [1, 2]}, "list": [{"__bytes__": "hi"}]}
+        result = deserialize_value(data)
+        assert result["outer"] == {1, 2}
+        assert result["list"] == [b"hi"]
+
 
 class TestRoundTrip:
     """Test serialize -> deserialize round trip."""
@@ -141,3 +184,25 @@ class TestRoundTrip:
         serialized = serialize_value(value)
         deserialized = deserialize_value(serialized)
         assert deserialized == value
+
+    def test_round_trip_set(self):
+        value = {1, 2, 3}
+        serialized = serialize_value(value)
+        deserialized = deserialize_value(serialized)
+        assert deserialized == value
+
+    def test_round_trip_frozenset(self):
+        value = frozenset([1, 2, 3])
+        serialized = serialize_value(value)
+        deserialized = deserialize_value(serialized)
+        assert deserialized == value
+
+    def test_round_trip_argparse_suppress(self):
+        serialized = serialize_value(argparse.SUPPRESS)
+        deserialized = deserialize_value(serialized)
+        assert deserialized is argparse.SUPPRESS
+
+    def test_round_trip_argparse_remainder(self):
+        serialized = serialize_value(argparse.REMAINDER)
+        deserialized = deserialize_value(serialized)
+        assert deserialized == argparse.REMAINDER

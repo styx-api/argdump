@@ -19,6 +19,7 @@ Usage:
 """
 
 from ._deserializer import load, loads
+from ._schema import EnvironmentInfo, get_environment_info
 from ._serializer import dump, dumps
 from ._types import UnresolvableTypeError
 
@@ -51,4 +52,7 @@ __all__ = [
     "MutualExclusionGroup",
     "ArgumentGroup",
     "ParserInfo",
+    "EnvironmentInfo",
+    # Utilities
+    "get_environment_info",
 ]

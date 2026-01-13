@@ -39,10 +39,21 @@ A JSON Schema for validating serialized output is available at [`docs/schema-v1.
 ## Features
 
 - All standard actions (store, append, count, etc.)
-- Subparsers (nested)
-- Mutual exclusion groups
+- Subparsers with aliases
+- Mutual exclusion and argument groups
 - Type converters (builtins, FileType, importable functions)
 - Choices, defaults, metavar, help text
+- Environment metadata (`$env`) for reproducibility
+
+## Options
+
+```python
+# Exclude environment metadata
+argdump.dump(parser, include_env=False)
+
+# Non-strict mode: skip unresolvable types instead of raising
+argdump.load(data, strict=False)
+```
 
 ## Limitations
 

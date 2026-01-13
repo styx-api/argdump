@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import argparse
+import builtins
 import importlib
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Optional, Union
 
 from .models import FileTypeInfo, TypeInfo
 
-# Builtins we can serialize/deserialize
-_BUILTINS = {
+# Type converter callable signature (permissive to accommodate builtins)
+TypeConverter = Callable[..., Any]
+
+# Builtin types we can serialize/deserialize
+_BUILTIN_CONVERTERS: Dict[str, TypeConverter] = {
     "int": int,
     "float": float,
     "str": str,
@@ -23,12 +27,21 @@ _BUILTINS = {
 _BUILTIN_TYPES = (int, float, str, bool, complex, bytes, bytearray)
 
 
-def type_info_from_callable(type_func: Any) -> TypeInfo | None:
-    """Extract TypeInfo from a type callable."""
+class UnresolvableTypeError(Exception):
+    """Raised when a type converter cannot be reconstructed."""
+
+    pass
+
+
+def type_info_from_callable(type_func: Any) -> Optional[TypeInfo]:
+    """Extract TypeInfo from a type callable.
+
+    Introspects a callable to determine how it should be serialized.
+    """
     if type_func is None:
         return None
 
-    # Python builtins
+    # Python builtin types
     if type_func in _BUILTIN_TYPES:
         return TypeInfo(name=type_func.__name__, builtin=True)
 
@@ -38,14 +51,15 @@ def type_info_from_callable(type_func: Any) -> TypeInfo | None:
     if type_func is open:
         return TypeInfo(name="open", builtin=True, serializable=False)
 
-    # argparse.FileType handled by caller
+    # argparse.FileType is handled specially by the caller
     if isinstance(type_func, argparse.FileType):
         return TypeInfo(name="FileType", module="argparse", serializable=True)
 
+    # Extract name and module
     name = getattr(type_func, "__name__", None)
     module = getattr(type_func, "__module__", None)
 
-    # Lambdas are not serializable
+    # Lambdas cannot be serialized
     if name == "<lambda>":
         return TypeInfo(name="<lambda>", module=module, serializable=False)
 
@@ -68,29 +82,60 @@ def file_type_info_from_instance(file_type: argparse.FileType) -> FileTypeInfo:
     )
 
 
-class UnresolvableTypeError(Exception):
-    """Raised when a type converter cannot be reconstructed."""
-
-    pass
-
-
 def resolve_type(
-    type_info: TypeInfo | dict | None,
-    file_type_info: FileTypeInfo | dict | None = None,
+    type_info: Union[TypeInfo, Dict[str, Any], None],
+    file_type_info: Union[FileTypeInfo, Dict[str, Any], None] = None,
     *,
     strict: bool = True,
-) -> Callable | None:
-    """Resolve TypeInfo back to a callable type converter."""
+) -> Optional[TypeConverter]:
+    """Resolve TypeInfo back to a callable type converter.
+
+    Args:
+        type_info: Type information to resolve
+        file_type_info: Additional info for FileType reconstruction
+        strict: If True, raise on unresolvable types; if False, return None
+
+    Returns:
+        The resolved callable, or None if unresolvable in non-strict mode
+
+    Raises:
+        UnresolvableTypeError: In strict mode when type cannot be resolved
+    """
     if type_info is None:
         return None
 
-    # Handle dict input (from JSON)
+    # Normalize dict inputs to dataclass instances
     if isinstance(type_info, dict):
         type_info = TypeInfo(**type_info)
     if isinstance(file_type_info, dict):
         file_type_info = FileTypeInfo(**file_type_info)
 
-    # FileType
+    # Check if explicitly marked as non-serializable first
+    if not type_info.serializable:
+        if strict:
+            raise UnresolvableTypeError(f"Type '{type_info.name}' was marked as non-serializable")
+        return None
+
+    # Try resolution strategies in order
+    result = (
+        _resolve_file_type(type_info, file_type_info)
+        or _resolve_builtin(type_info, strict)
+        or _resolve_by_import(type_info, strict)
+        or _resolve_from_builtins_module(type_info)
+    )
+
+    if result is not None:
+        return result
+
+    if strict:
+        raise UnresolvableTypeError(f"Could not resolve type '{type_info.name}'")
+    return None
+
+
+def _resolve_file_type(
+    type_info: TypeInfo, file_type_info: Optional[FileTypeInfo]
+) -> Optional[argparse.FileType]:
+    """Resolve argparse.FileType."""
     if type_info.name == "FileType" and type_info.module == "argparse":
         if file_type_info:
             return argparse.FileType(
@@ -100,40 +145,47 @@ def resolve_type(
                 errors=file_type_info.errors,
             )
         return argparse.FileType()
+    return None
 
-    # Builtins
-    if type_info.builtin:
-        if type_info.name in _BUILTINS:
-            return _BUILTINS[type_info.name]
-        if type_info.name == "open":
-            if strict:
-                raise UnresolvableTypeError("Cannot deserialize 'open' as type converter")
-            return None
 
-    # Non-serializable
-    if not type_info.serializable:
-        if strict:
-            raise UnresolvableTypeError(f"Type '{type_info.name}' was marked as non-serializable")
+def _resolve_builtin(type_info: TypeInfo, strict: bool) -> Optional[TypeConverter]:
+    """Resolve builtin type converters."""
+    if not type_info.builtin:
         return None
 
-    # Import by module.name
-    if type_info.module:
-        try:
-            module = importlib.import_module(type_info.module)
-            return getattr(module, type_info.name)
-        except (ImportError, AttributeError) as e:
-            if strict:
-                raise UnresolvableTypeError(
-                    f"Could not import '{type_info.module}.{type_info.name}': {e}"
-                ) from e
-            return None
+    if type_info.name in _BUILTIN_CONVERTERS:
+        return _BUILTIN_CONVERTERS[type_info.name]
 
-    # Check builtins as fallback
-    import builtins
+    return None
 
+
+def _resolve_by_import(type_info: TypeInfo, strict: bool) -> Optional[TypeConverter]:
+    """Resolve type by importing from module."""
+    if not type_info.module or not type_info.serializable:
+        return None
+
+    try:
+        module = importlib.import_module(type_info.module)
+        attr = getattr(module, type_info.name)
+        if callable(attr):
+            result: TypeConverter = attr
+            return result
+        if strict:
+            raise UnresolvableTypeError(f"'{type_info.module}.{type_info.name}' is not callable")
+        return None
+    except (ImportError, AttributeError) as e:
+        if strict:
+            raise UnresolvableTypeError(
+                f"Could not import '{type_info.module}.{type_info.name}': {e}"
+            ) from e
+        return None
+
+
+def _resolve_from_builtins_module(type_info: TypeInfo) -> Optional[TypeConverter]:
+    """Fallback resolution from builtins module."""
     if hasattr(builtins, type_info.name):
-        return getattr(builtins, type_info.name)
-
-    if strict:
-        raise UnresolvableTypeError(f"Could not resolve type '{type_info.name}'")
+        attr = getattr(builtins, type_info.name)
+        if callable(attr):
+            result: TypeConverter = attr
+            return result
     return None

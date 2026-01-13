@@ -1,35 +1,31 @@
-name: Publish to PyPi
-
-permissions:
-  actions: write
+name: Publish to PyPI
 
 on:
   push:
     tags:
-    - '*'
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
-  pypi-release:
-    name: PyPi Release
+  publish:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
 
-    - name: Setup uv
-      uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
 
-    - name: Install dependencies and build
-      run: |
-        uv sync --frozen --no-dev --no-install-project
-        uv build
+      - name: Install build tools
+        run: pip install build
 
-    - name: Publish to PyPi
-      id: pypi_publish
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_TOKEN }}
-        verbose: true
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
