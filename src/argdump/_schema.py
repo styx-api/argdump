@@ -5,7 +5,7 @@ from __future__ import annotations
 import platform
 from dataclasses import dataclass
 
-SCHEMA_URL_V1 = "https://childmindresearch.github.io/argdump/schema-v1.json"
+SCHEMA_URL_V1 = "https://niwrap.dev/argdump/schema-v1.json"
 
 
 @dataclass

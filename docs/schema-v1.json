@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://childmindresearch.github.io/argdump/schema-v1.json",
+  "$id": "https://niwrap.dev/argdump/schema-v1.json",
   "title": "ParserInfo",
   "description": "Serialized argparse.ArgumentParser",
   "type": "object",
