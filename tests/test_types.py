@@ -70,7 +70,9 @@ class TestTypeInfoFromCallable:
         info = type_info_from_callable(Path)
         assert info is not None
         assert info.name == "Path"
-        assert info.module == "pathlib"
+        # Module may be 'pathlib' or 'pathlib._local' depending on Python version
+        assert info.module is not None
+        assert info.module.startswith("pathlib")
         assert info.serializable is True
 
     def test_custom_function(self):

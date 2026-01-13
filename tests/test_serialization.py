@@ -200,7 +200,8 @@ class TestTypeHandling:
 
         action = next(a for a in data["actions"] if a["dest"] == "path")
         assert action["type_info"]["name"] == "Path"
-        assert action["type_info"]["module"] == "pathlib"
+        # Module may be 'pathlib' or 'pathlib._local' depending on Python version
+        assert action["type_info"]["module"].startswith("pathlib")
 
 
 class TestNargs:
