@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from dataclasses import asdict
+from dataclasses import MISSING, fields, is_dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -266,14 +266,54 @@ def _serialize_mutex_groups(
 # --- JSON encoding ---
 
 
+def _asdict_omit_defaults(obj: Any) -> Any:
+    """Convert dataclass to dict, omitting fields with default values."""
+    if not is_dataclass(obj) or isinstance(obj, type):
+        return obj
+
+    result = {}
+    for f in fields(obj):
+        value = getattr(obj, f.name)
+
+        # Determine default
+        if f.default is not MISSING:
+            default = f.default
+        elif f.default_factory is not MISSING:
+            default = f.default_factory()
+        else:
+            default = MISSING
+
+        # Skip if matches default (but always include required fields)
+        if default is not MISSING and value == default:
+            continue
+
+        # Recurse into nested structures
+        if is_dataclass(value) and not isinstance(value, type):
+            value = _asdict_omit_defaults(value)
+        elif isinstance(value, list):
+            value = [
+                _asdict_omit_defaults(v) if is_dataclass(v) and not isinstance(v, type) else v
+                for v in value
+            ]
+        elif isinstance(value, dict):
+            value = {
+                k: _asdict_omit_defaults(v) if is_dataclass(v) and not isinstance(v, type) else v
+                for k, v in value.items()
+            }
+
+        result[f.name] = value
+
+    return result
+
+
 class _Encoder(json.JSONEncoder):
     """JSON encoder for dataclasses and enums."""
 
     def default(self, o: Any) -> Any:
         if isinstance(o, Enum):
             return o.value
-        if hasattr(o, "__dataclass_fields__"):
-            return asdict(o)
+        if is_dataclass(o) and not isinstance(o, type):
+            return _asdict_omit_defaults(o)
         return super().default(o)
 
 

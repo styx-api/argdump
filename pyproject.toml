@@ -1,6 +1,6 @@
 [project]
 name = "argdump"
-version = "0.1.1"
+version = "0.1.2"
 description = "Serialize and deserialize argparse parsers"
 readme = "README.md"
 license = "MIT"

@@ -181,7 +181,7 @@ class TestTypeHandling:
 
         action = next(a for a in data["actions"] if a["dest"] == "input")
         assert action["type_info"]["name"] == "FileType"
-        assert action["file_type_info"]["mode"] == "r"
+        assert action["file_type_info"].get("mode", "r") == "r"
         assert action["file_type_info"]["encoding"] == "utf-8"
 
     def test_lambda_not_serializable(self):
@@ -323,7 +323,7 @@ class TestSpecialValues:
         data = argdump.dump(parser)
 
         action = next(a for a in data["actions"] if a["dest"] == "internal")
-        assert action["help"] is None
+        assert action.get("help") is None
 
     def test_complex_defaults(self):
         parser = argparse.ArgumentParser()
@@ -358,4 +358,56 @@ class TestDeprecated:
         data = argdump.dump(parser)
         action = next(a for a in data["actions"] if a["dest"] == "flag")
 
-        assert action["deprecated"] is False
+        assert action.get("deprecated", False) is False
+
+
+class TestOmitDefaults:
+    """Test that default values are omitted from serialized output."""
+
+    def test_default_values_omitted(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--flag")
+        data = argdump.dump(parser)
+
+        action = next(a for a in data["actions"] if a["dest"] == "flag")
+
+        # These are all defaults and should be absent
+        assert "required" not in action  # default False
+        assert "deprecated" not in action  # default False
+        assert "help" not in action  # default None
+        assert "nargs" not in action  # default None
+        assert "const" not in action  # default None
+        assert "default" not in action  # default None
+        assert "choices" not in action  # default None
+
+    def test_non_default_values_present(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--flag", required=True, help="A flag", default="foo")
+        data = argdump.dump(parser)
+
+        action = next(a for a in data["actions"] if a["dest"] == "flag")
+
+        # Non-default values should be present
+        assert action["required"] is True
+        assert action["help"] == "A flag"
+        assert action["default"] == "foo"
+
+    def test_file_type_omits_defaults(self):
+        parser = argparse.ArgumentParser()
+        # All defaults: mode="r", bufsize=-1, encoding=None, errors=None
+        parser.add_argument("--default-file", type=argparse.FileType())
+        # Non-defaults
+        parser.add_argument("--custom-file", type=argparse.FileType("wb", encoding="utf-8"))
+        data = argdump.dump(parser)
+
+        default_action = next(a for a in data["actions"] if a["dest"] == "default_file")
+        custom_action = next(a for a in data["actions"] if a["dest"] == "custom_file")
+
+        # Default FileType may have empty or minimal file_type_info
+        default_fti = default_action.get("file_type_info", {})
+        assert "encoding" not in default_fti  # None is default
+
+        # Custom FileType should have non-default values
+        custom_fti = custom_action["file_type_info"]
+        assert custom_fti.get("mode", "r") == "wb"
+        assert custom_fti["encoding"] == "utf-8"

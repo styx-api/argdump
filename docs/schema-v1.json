@@ -99,6 +99,7 @@
       "items": {
         "$ref": "#/$defs/ActionInfo"
       },
+      "default": [],
       "description": "List of all argument actions defined on this parser, including positional arguments, optional arguments, and special actions like help and version."
     },
     "argument_groups": {
@@ -106,6 +107,7 @@
       "items": {
         "$ref": "#/$defs/ArgumentGroup"
       },
+      "default": [],
       "description": "List of argument groups for organizing arguments in help output. By default, arguments are grouped into 'positional arguments' and 'options'. Custom groups can provide better conceptual organization."
     },
     "mutually_exclusive_groups": {
@@ -113,14 +115,10 @@
       "items": {
         "$ref": "#/$defs/MutualExclusionGroup"
       },
+      "default": [],
       "description": "List of mutually exclusive argument groups. Arguments within a group cannot be used together; the parser will raise an error if multiple arguments from the same exclusive group are provided."
     }
   },
-  "required": [
-    "actions",
-    "argument_groups",
-    "mutually_exclusive_groups"
-  ],
   "$defs": {
     "EnvironmentInfo": {
       "type": "object",
@@ -249,6 +247,7 @@
           "items": {
             "type": "string"
           },
+          "default": [],
           "description": "List of option strings that trigger this action (e.g., ['-f', '--foo']). Empty for positional arguments. For optional arguments, the first long option (or first short option if no long) determines the dest."
         },
         "dest": {
@@ -257,6 +256,7 @@
         },
         "action_type": {
           "$ref": "#/$defs/ActionType",
+          "default": "store",
           "description": "The type of action to perform when this argument is encountered."
         },
         "nargs": {
@@ -430,9 +430,7 @@
         }
       },
       "required": [
-        "option_strings",
-        "dest",
-        "action_type"
+        "dest"
       ]
     },
     "ArgumentGroup": {
@@ -458,12 +456,10 @@
           "items": {
             "type": "string"
           },
+          "default": [],
           "description": "List of argument dest values that belong to this group."
         }
-      },
-      "required": [
-        "actions"
-      ]
+      }
     },
     "MutualExclusionGroup": {
       "type": "object",
@@ -471,6 +467,7 @@
       "properties": {
         "required": {
           "type": "boolean",
+          "default": false,
           "description": "Whether at least one argument from this group must be provided. When true, an error is raised if none of the group's arguments are given."
         },
         "actions": {
@@ -478,13 +475,10 @@
           "items": {
             "type": "string"
           },
+          "default": [],
           "description": "List of argument dest values that are mutually exclusive with each other."
         }
-      },
-      "required": [
-        "required",
-        "actions"
-      ]
+      }
     },
     "ArgparseMarker": {
       "type": "object",
