@@ -349,7 +349,7 @@ class TestDeprecated:
         actions = {a["dest"]: a for a in data["actions"]}
 
         assert actions["old_flag"]["deprecated"] is True
-        assert actions["new_flag"]["deprecated"] is False
+        assert "deprecated" not in actions["new_flag"]
 
     def test_deprecated_defaults_to_false(self):
         parser = argparse.ArgumentParser()
